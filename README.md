@@ -106,45 +106,6 @@ After this:
 
 ---
 
-## 🪑 Seat Booking Logic
-
-This is where things get interesting.
-
-### Endpoint:
-
-```http
-PUT /:id/:name
-```
-
-### Flow:
-
-1. Start DB transaction
-2. Lock seat row:
-
-   ```sql
-   SELECT * FROM seats WHERE id=$1 AND isbooked=0 FOR UPDATE
-   ```
-3. If seat already booked → fail
-4. Else:
-
-   * mark as booked
-   * store user name
-5. Commit transaction
-
----
-
-### 🧠 Why `FOR UPDATE`?
-
-Because without it:
-
-> Two users could book the same seat at the same time.
-
-With it:
-
-> Only one survives. The other gets rejected.
-
----
-
 ## 🌍 Public vs Protected
 
 * `/seats` → public (anyone can view)
