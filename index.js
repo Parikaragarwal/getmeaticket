@@ -7,10 +7,17 @@
 // SELECT 0 FROM generate_series(1, 20);
 
 import express from "express";
-import pg from "pg";
+import pool from "./src/common/config/db.js";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import authRouter from './src/modules/user/user.routes.js'
+import authenticate from "./src/modules/user/user.middleware.js";
+dotenv.config();
+
+
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -20,32 +27,32 @@ const port = process.env.PORT || 8080;
 // Pool is nothing but group of connections
 // If you pick one connection out of the pool and release it
 // the pooler will keep that connection open for sometime to other clients to reuse
-const pool = new pg.Pool({
-  host: "localhost",
-  port: 5433,
-  user: "postgres",
-  password: "postgres",
-  database: "sql_class_2_db",
-  max: 20,
-  connectionTimeoutMillis: 0,
-  idleTimeoutMillis: 0,
-});
 
-const app = new express();
+
+const app = express();
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({extended:false}));
+app.use(cookieParser());
+app.use('/auth',authRouter);
 
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/index.html");
+  res.sendFile(__dirname + "/views/index.html");
 });
 //get all seats
-app.get("/seats", async (req, res) => {
+app.get("/seats",async (req, res) => {
   const result = await pool.query("select * from seats"); // equivalent to Seats.find() in mongoose
+  // console.log(result);
   res.send(result.rows);
 });
 
+app.get('/me',authenticate,(req,res)=>{
+  res.json(req.user);
+})
+
 //book a seat give the seatId and your name
 
-app.put("/:id/:name", async (req, res) => {
+app.put("/:id/:name", authenticate ,async (req, res) => {
   try {
     const id = req.params.id;
     const name = req.params.name;
@@ -62,7 +69,6 @@ app.put("/:id/:name", async (req, res) => {
     // then it can be manipulated by the user to execute malicious SQL code)
     const sql = "SELECT * FROM seats where id = $1 and isbooked = 0 FOR UPDATE";
     const result = await conn.query(sql, [id]);
-
     //if no rows found then the operation should fail can't book
     // This shows we Do not have the current seat available for booking
     if (result.rowCount === 0) {
@@ -83,4 +89,4 @@ app.put("/:id/:name", async (req, res) => {
   }
 });
 
-app.listen(port, () => console.log("Server starting on port: " + port));
+app.listen(port, () => console.log("Server starting on port: " + `http://localhost:${port}`));

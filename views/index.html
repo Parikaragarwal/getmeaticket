@@ -106,10 +106,28 @@
 
             try {
               const id = j[i].id; // Safe from loop closure
-              const name = prompt("Enter your name");
-              if (!name) return;
+              // const name = prompt("Enter your name");
+              
+              let response = await fetch('/me');
 
-              const res = await fetch(`/${id}/${name}`, { method: "PUT" });
+              if(!response.ok){
+                const refreshRes = await fetch('/auth/refresh');
+                if (!refreshRes.ok) {
+                  window.location.href = '/auth/login';
+                  return;
+                }
+                response = await fetch('/me');
+                if(!response.ok){
+                  alert('Some Error Occured');
+                  return;
+                }
+              }
+              const userData = await response.json();
+            
+              const username = userData.username;
+              if (!username) return;
+
+              const res = await fetch(`/${id}/${username}`, { method: "PUT" });
               const data = await res.json();
 
               if (data.error) {
@@ -121,7 +139,7 @@
                 currentTd.innerHTML = `
                             <span class="relative z-10">${id}</span>
                             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-4 py-2 bg-slate-900 border border-slate-700 text-sm text-slate-300 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap shadow-2xl z-50 pointer-events-none font-normal shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
-                                Booked by: <span class="font-bold text-white ml-1">${name}</span>
+                                Booked by: <span class="font-bold text-white ml-1">${username}</span>
                                 <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-[6px] border-transparent border-t-slate-700"></div>
                                 <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-[2px] border-[5px] border-transparent border-t-slate-900"></div>
                             </div>
